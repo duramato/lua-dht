@@ -66,7 +66,7 @@ function main()
 	udp_port:setsockname("*", port_number)
 	udp_port:settimeout(1)
 	
-	local tcp_port = socket.bind("127.0.0.1", port_number)
+	local tcp_port = socket.bind("*", port_number)
 	tcp_port:settimeout(0.001)
 	
 	function on_error()
