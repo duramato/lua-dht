@@ -11,7 +11,19 @@ require("http")
 require("util")
 
 function statistic_distance(id1 , id2)
-	return xor(id1:byte(1), id2:byte(1)) * (256^3)  + xor(id1:byte(2), id2:byte(2)) * (256^2) + xor(id1:byte(3), id2:byte(3)) * 256 + xor(id1:byte(4), id2:byte(4))
+	if (id1 == nil) or (id2 == nil) then
+		print_msg("Crisis adverted \n")
+	elseif (id1 == "") or (id2 == "") then
+		print_msg("Crisis adverted \n")
+	else
+		distance = xor(id1:byte(1), id2:byte(1)) * (256^3)  + xor(id1:byte(2), id2:byte(2)) * (256^2) + xor(id1:byte(3), id2:byte(3)) * 256 + xor(id1:byte(4), id2:byte(4))
+		--print_msg(string.format("distance calculated: (%s)\n", distance))
+	end
+	if distance == nil then
+		print_msg("Crisis adverted \n")
+		distance = 127655928
+	end
+	return distance
 end
 
 local help = {
@@ -410,7 +422,7 @@ function get_values(info_hash, not_annonced)
 				table.insert(values, compact)
 			end
 		end
-		
+		print(string.format("Peers count: %s", peers_count))
 		if not next(values) then
 			peers.btih[info_hash] = nil
 		else
@@ -821,6 +833,7 @@ for i = 1, 10 do
 		errfile = io.open(error_log, "ab+")
 		errfile:write("\n"..debug.traceback(mainco, err))
 		errfile:close()
+		print("\n"..debug.traceback(mainco, err))
 		on_error()
 	end
 end
