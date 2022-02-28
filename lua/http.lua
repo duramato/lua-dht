@@ -18,8 +18,8 @@ function next_client(tcp_port)
 		return g2_main(client)
 	end
 	
-	-- Brouser --
-	if string.find(request, " / ") then
+	-- Browser --
+	if string.find(request, " /main ") then
 		return http.main_page(client)
 	end
 	
@@ -74,17 +74,29 @@ function next_client(tcp_port)
 	
 	if string.find(request, " /announce", 1, true) then
 		print("\t\t\t> http (announce)")
+		print(request)
 		search_peers(info_hash)
 		announce_peer(info_hash, port)
-		responce = {interval = 120}
-		local values = get_values(info_hash, true)
+		
+		local values, peers_count = get_values(info_hash, true)
 		if values then
+			responce = {interval = 120, complete = peers_count, downloaded = peers_count, incomplete = peers_count}
 			responce.peers =table.concat(values)
 			table_type = {[responce] = announce_responce}
+		else
+			responce = {interval = 120}
 		end
 	elseif string.find(request, " /scrape", 1, true) then
 		print("\t\t\t> http (scrape)")
-		responce = {[info_hash] = {complete = 0, downloaded = 0, incomplete = 0}}
+		print(request)
+		
+		local values, peers_count = get_values(info_hash, true)
+		if peers_count then
+			print("There is values")
+			responce = {[info_hash] = {complete = peers_count, downloaded = peers_count, incomplete = peers_count}}
+		else
+			responce = {[info_hash] = {complete = 0, downloaded = 0, incomplete = 0}}
+		end
 		table_type = {[responce] = scrape_responce, [responce[info_hash]] = scrape_details}
 	else
 		if info_hash then
@@ -93,12 +105,11 @@ function next_client(tcp_port)
 			return http.not_found(client)
 		end
 	end
-	
 	client:send(to_http(to_bencode(responce, table_type)))
 	client:close()
 end
 
-announce_responce = { t = "d", o = {"interval", "peers"} }
+announce_responce = { t = "d", o = {"interval", "peers","complete","downloaded","incomplete"} }
 scrape_responce = { t = "d" }
 scrape_details = {t = "d", o = {"complete","downloaded","incomplete"}}
 
@@ -124,12 +135,19 @@ end
 
 function http.main_page(client)
 		local buff = new_string_builder()
-		buff.add("<html><head><title>Lua DHT Tracker Info</title></head><body>")
+		print("my ip: "..my_ip)
+		if (my_ip == nil or my_ip == '') then
+			used_ip = "1.1.1.1"
+		else
+			used_ip = decode_ip(my_ip)
+		end
+		print("my ip: "..my_ip)
+		buff.add("<html><head><title>DHT Tracker Info</title></head><body>")
 		buff.add("<pre>"..welcome_msg.."</pre>")
 		buff.add(
 [[
 <p>
-	node ip: ]]..decode_ip(my_ip).."<br />\n"..[[
+	node ip: ]]..used_ip.."<br />\n"..[[
 	node id: ]]..hexenc(my_id).."<br />\n"..[[
 	nodes count: ]]..(nodes.count or "unknown").."\n"..[[
 </p>
@@ -162,8 +180,7 @@ end
 
 function http.svg_map(client)
 	print("\t\t\t>http map")
-	local buff = { new_string_builder(), new_string_builder(), new_string_builder(), 
-	new_string_builder() }
+	local buff = { new_string_builder(), new_string_builder(), new_string_builder(), new_string_builder(), new_string_builder() }
 	buff[1].add([[<?xml version="1.0" encoding="UTF-8"?>
 <svg version="1.1"
  baseProfile="full"
@@ -176,10 +193,12 @@ function http.svg_map(client)
 	
 	buff[1].add([[<g stroke="red" >]])
 	buff[2].add([[<g fill="#000088" >]])
-	buff[3].add([[<g stroke="#000088" stroke-whith="2px" fill="none">]])
+	buff[3].add([[<g stroke="#000088" fill="none">]])
 	buff[4].add([[<g stroke="#880000">]])
+	buff[5].add([[<g stroke="#880000">]])
 	
 	for ip, port_list in pairs(nodes.ap) do
+
 		for port, node in pairs(port_list) do
 			local opacity = (1 - (os.time() - (node.last_seen or node.added)) / (15*60) )
 			
@@ -201,11 +220,13 @@ function http.svg_map(client)
 				
 				
 				if node.announced then
-					buff[3].add([[<circle cx="]]..x..[[%" cy="]]..y..[[%" r="5px"]]
+					buff[3].add([[<circle cx="]]..x..[[%" cy="]]..y..[[%" r="20px"]]
 									..opacity..[[ stroke="red" />]])
 				elseif node.peer then
-					buff[3].add([[<circle cx="]]..x..[[%" cy="]]..y..[[%" r="5px"]]
+					buff[3].add([[<circle cx="]]..x..[[%" cy="]]..y..[[%" r="20px"]]
 									..opacity..[[ />]])
+					print(string.format("x=%s y=%s ip=%s", x,y,ip))
+					buff[5].add([[<text x="]]..x..[[%" y="]]..y..[[%">]]..ip..[[ </text>]])
 				end
 			end
 		end
@@ -231,8 +252,9 @@ function http.svg_map(client)
 	buff[2].add("</g>")
 	buff[3].add("</g>")
 	buff[4].add("</g>")
-	buff[4].add("</svg>")
-	client:send(to_http(buff[1].get("\n")..buff[2].get("\n")..buff[3].get("\n")..buff[4].get("\n"), "image/svg+xml"))
+	buff[5].add("</g>")
+	buff[5].add("</svg>")
+	client:send(to_http(buff[1].get("\n")..buff[2].get("\n")..buff[3].get("\n")..buff[4].get("\n")..buff[5].get("\n"), "image/svg+xml"))
 	client:close()
 end
 
@@ -254,7 +276,7 @@ function http.info(client)
 	end
 	table.sort(buff1, sort_by_count)
 	local buff = new_string_builder()
-	buff.add("<html><head><title>Lua DHT Tracker Info</title></head><body><table>")
+	buff.add("<html><head><title>DHT Tracker Info</title></head><body><table>")
 	buff.add("<tr><th>BitTorrent Info Hash or Name</th><th>count</th><th>list</th></tr>")
 	for index, value  in pairs(buff1) do
 		local name = (torrent_info[value.hash_raw] and torrent_info[value.hash_raw].name) or  value.hash
