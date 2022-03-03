@@ -1,7 +1,7 @@
 require("settings")
 require("lua\/print_override")
 
-require("lua\/socket")
+require("socket")
 require("lua\/encoding")
 require("lua\/torred")
 require("lua\/serialize3")
