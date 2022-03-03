@@ -1,4 +1,4 @@
-require("compact_encoding")
+require("lua\/compact_encoding")
 
 nodes = {ap = {}, by_id={}, id_map={}}
 
