@@ -1,14 +1,15 @@
 require("settings")
-require("print_override")
+require("lua\/print_override")
 
-require("socket")
-require("encoding")
-require("torred")
-require("serialize3")
-require("compact_encoding")
-require("nodes")
-require("http")
-require("util")
+require("lua\/socket")
+require("lua\/encoding")
+require("lua\/torred")
+require("lua\/serialize3")
+require("lua\/compact_encoding")
+require("lua\/nodes")
+require("lua\/http")
+require("\/util")
+
 
 function statistic_distance(id1 , id2)
 	if (id1 == nil) or (id2 == nil) then
