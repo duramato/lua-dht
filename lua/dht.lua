@@ -8,7 +8,7 @@ require("lua\/serialize3")
 require("lua\/compact_encoding")
 require("lua\/nodes")
 require("lua\/http")
-require("\/util")
+require("lua\/util")
 
 
 function statistic_distance(id1 , id2)
